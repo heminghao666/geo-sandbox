@@ -1,0 +1,35 @@
+{
+  "bbox": {
+    "south": 39.91319946480938,
+    "west": 116.39295758122148,
+    "north": 39.91940039482658,
+    "east": 116.40104241877856
+  },
+  "center": {
+    "lon": 116.397,
+    "lat": 39.9163,
+    "size": 900
+  },
+  "options": {
+    "heightScale": 1,
+    "elevationScale": 1,
+    "buildings": true,
+    "roads": true,
+    "water": true,
+    "green": true,
+    "plinth": true,
+    "showWire": false
+  },
+  "stats": {
+    "buildings": 484,
+    "roads": 145,
+    "water": 12,
+    "green": 36,
+    "triangles": 47195,
+    "heightRange": [
+      0,
+      0
+    ]
+  },
+  "note": "GLB 单位=米，Y 轴向上，原点 = 区域中心。用 blender/build_sandbox.py 导入。"
+}

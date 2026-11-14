@@ -1,0 +1,34 @@
+{
+  "name": "geo-sandbox",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "OpenStreetMap + three.js + Blender 三维场景 / 沙盘工具",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "serve": "node server/index.mjs",
+    "blender": "node scripts/blender.mjs",
+    "blender:demo": "node scripts/blender.mjs --glb sample/sandbox.glb --out sample/sandbox.blend --render sample/sandbox.png",
+    "gh": "node scripts/gh.mjs"
+  },
+  "dependencies": {
+    "@mapbox/vector-tile": "^3.0.0",
+    "@react-three/drei": "^9.114.3",
+    "@react-three/fiber": "^8.17.10",
+    "maplibre-gl": "^4.7.1",
+    "pbf": "^5.1.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@types/three": "^0.169.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.9"
+  }
+}
