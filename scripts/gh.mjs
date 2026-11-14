@@ -78,7 +78,7 @@ async function api(pathname, { method = 'GET', body, raw = false, headers = {} }
 }
 
 // ---------------------------------------------------------------- 文件收集
-const SKIP_DIRS = new Set(['node_modules', '.git', '.vite', '__pycache__', '.cache'])
+const SKIP_DIRS = new Set(['node_modules', '.git', '.vite', '__pycache__', '.cache', 'dist'])
 const SKIP_EXT = new Set(['.blend', '.blend1', '.exe', '.dll', '.psd'])
 const MAX_FILE = 40 * 1024 * 1024
 
@@ -88,7 +88,6 @@ function collect(dir, base = '', out = [], opts = {}) {
     const rel = base ? `${base}/${entry.name}` : entry.name
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue
-      if (entry.name === 'dist' && opts.noDist) continue
       collect(full, rel, out, opts)
     } else if (entry.isFile()) {
       const ext = path.extname(entry.name).toLowerCase()
@@ -146,7 +145,7 @@ async function create() {
   return repo
 }
 
-async function pushTo(owner, repo, { branch, message, noDist = false } = {}) {
+async function pushTo(owner, repo, { branch, message, noDist = false, clean = false } = {}) {
   if (!TOKEN) throw new Error('推送需要 token（GITHUB_TOKEN / .github-token）')
   message = message || `update: ${new Date().toISOString()}`
 
@@ -209,7 +208,7 @@ async function pushTo(owner, repo, { branch, message, noDist = false } = {}) {
   // 3) tree
   const tree = await api(`/repos/${owner}/${repo}/git/trees`, {
     method: 'POST',
-    body: { base_tree: baseTree ?? undefined, tree: blobs },
+    body: { base_tree: clean ? undefined : baseTree ?? undefined, tree: blobs },
   })
 
   // 4) commit
@@ -323,20 +322,34 @@ async function publish() {
   const r = spawnSync('npm', ['run', 'build'], { cwd: ROOT, stdio: 'inherit', shell: true })
   if (r.status !== 0) throw new Error('构建失败，先修掉上面的报错')
 
-  await pushTo(owner, name, { message: flag('message', 'deploy: geo-sandbox build') })
+  // Pages 的经典部署只支持从仓库根或 /docs 发布 —— 把 dist 复制成 docs
+  const docsDir = path.join(ROOT, 'docs')
+  fs.rmSync(docsDir, { recursive: true, force: true })
+  fs.cpSync(path.join(ROOT, 'dist'), docsDir, { recursive: true })
+  fs.writeFileSync(path.join(docsDir, '.nojekyll'), '')
+  console.log(`已生成 docs/（${fs.readdirSync(docsDir).length} 项）`)
+
+  await pushTo(owner, name, { message: flag('message', 'deploy: geo-sandbox build'), clean: true })
 
   const repoInfo = await api(`/repos/${owner}/${name}`)
   const br = repoInfo.default_branch || 'main'
+  const pagesPath = typeof flag('path') === 'string' ? flag('path') : '/docs'
   try {
     await api(`/repos/${owner}/${name}/pages`, {
       method: 'POST',
-      body: { source: { branch: br, path: '/' } },
+      body: { source: { branch: br, path: pagesPath } },
     })
-    console.log('Pages 已开启')
+    console.log(`Pages 已开启（${br} ${pagesPath}）`)
   } catch (e) {
-    if (e.status === 409) console.log('Pages 之前已开启')
-    else if (e.status === 422 || e.status === 403) console.log(`Pages 没开成（${e.message}）—— 去 Settings → Pages 手动选 ${br} / root`)
-    else throw e
+    if (e.status === 409) {
+      await api(`/repos/${owner}/${name}/pages`, {
+        method: 'PUT',
+        body: { source: { branch: br, path: pagesPath } },
+      })
+      console.log(`Pages 已重建（${br} ${pagesPath}）`)
+    } else if (e.status === 422 || e.status === 403) {
+      console.log(`Pages 没开成（${e.message}）—— 去 Settings → Pages 手动选 ${br} / docs`)
+    } else throw e
   }
   const info = await api(`/repos/${owner}/${name}/pages`).catch(() => null)
   console.log('\n完成。')
